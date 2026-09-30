@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loja Online JK</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f6f8;color:#222}
+header{background:#111827;color:#fff;padding:16px;position:sticky;top:0;z-index:5}
+.top{max-width:1100px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{font-size:22px;font-weight:800}.actions{display:flex;gap:8px;flex-wrap:wrap}
+button,.btn{border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer}
+.primary{background:#facc15;color:#111}.dark{background:#374151;color:white}.danger{background:#ef4444;color:white}
+main{max-width:1100px;margin:auto;padding:24px 16px}
+.hero{background:white;border-radius:16px;padding:24px;margin-bottom:20px;text-align:center}
+.hero h1{margin:0 0 8px}.hero p{margin:0;color:#666}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+.card{background:white;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px #00000010}
+.card img{width:100%;height:210px;object-fit:cover;background:#eee}.card-body{padding:14px}
+.card h3{margin:0 0 12px;font-size:17px}.buy{display:block;text-align:center;background:#16a34a;color:#fff;text-decoration:none;padding:11px;border-radius:9px;font-weight:800}
+.empty{text-align:center;color:#777;padding:40px;background:white;border-radius:14px}
+.panel{display:none;background:white;border-radius:14px;padding:18px;margin-bottom:20px}
+.panel h2{margin-top:0}.form{display:grid;gap:10px}.form input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:9px}
+.preview{width:100%;max-height:180px;object-fit:contain;background:#f3f4f6;border-radius:9px;display:none}
+.products-admin{display:grid;gap:10px;margin-top:18px}.admin-item{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #e5e7eb;border-radius:10px}
+.admin-item img{width:55px;height:55px;object-fit:cover;border-radius:8px}.admin-item span{flex:1;font-weight:700}
+.login{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.login-box{background:white;border-radius:15px;padding:22px;max-width:380px;width:100%}.login-box input{width:100%;padding:12px;margin:7px 0;border:1px solid #ccc;border-radius:8px}
+.small{font-size:13px;color:#777}
+footer{text-align:center;color:#777;padding:25px}
+@media(max-width:600px){.top{align-items:flex-start}.logo{font-size:19px}.hero{padding:18px}.card img{height:180px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div class="logo">🛍️ Loja Online JK</div>
+    <div class="actions">
+      <button class="dark" onclick="openLogin()">Entrar com e-mail</button>
+      <button class="primary" onclick="guest()">Continuar como convidado</button>
+      <button class="dark" id="adminBtn" onclick="toggleAdmin()">Painel</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <h1>Loja Online JK</h1>
+    <p>Encontre produtos e compre diretamente pelo link indicado.</p>
+  </section>
+
+  <section id="adminPanel" class="panel">
+    <h2>⚙️ Painel de produtos</h2>
+    <p class="small">Adicione produtos usando foto, nome e seu link de afiliado.</p>
+    <div class="form">
+      <input id="name" placeholder="Nome do produto">
+      <input id="link" placeholder="Link de afiliado do Mercado Livre">
+      <input id="photo" type="file" accept="image/*" onchange="previewPhoto(event)">
+      <img id="preview" class="preview">
+      <button class="primary" onclick="addProduct()">Adicionar produto</button>
+    </div>
+    <div id="adminList" class="products-admin"></div>
+  </section>
+
+  <section id="products" class="grid"></section>
+</main>
+
+<footer>Loja Online JK • Produtos selecionados</footer>
+
+<div id="login" class="login">
+  <div class="login-box">
+    <h2>Entrar</h2>
+    <p>Entre com seu e-mail ou continue como convidado.</p>
+    <input id="email" type="email" placeholder="Seu e-mail">
+    <button class="primary" style="width:100%" onclick="loginEmail()">Entrar com e-mail</button>
+    <button class="dark" style="width:100%;margin-top:8px" onclick="guest()">Continuar como convidado</button>
+    <button style="width:100%;margin-top:8px" onclick="closeLogin()">Fechar</button>
+  </div>
+</div>
+
+<script>
+let products = JSON.parse(localStorage.getItem("jk_products") || "[]");
+let currentPhoto = "";
+
+function save(){localStorage.setItem("jk_products",JSON.stringify(products)); render();}
+function render(){
+  const area=document.getElementById("products");
+  if(!products.length){area.innerHTML='<div class="empty" style="grid-column:1/-1">Nenhum produto publicado ainda.</div>'}
+  else area.innerHTML=products.map(p=>`<article class="card">
+    <img src="${p.photo}" alt="${esc(p.name)}">
+    <div class="card-body"><h3>${esc(p.name)}</h3>
+    <a class="buy" href="${safeUrl(p.link)}" target="_blank" rel="noopener">Comprar</a></div></article>`).join("");
+  document.getElementById("adminList").innerHTML=products.map((p,i)=>`
+    <div class="admin-item"><img src="${p.photo}"><span>${esc(p.name)}</span>
+    <button class="danger" onclick="removeProduct(${i})">Remover</button></div>`).join("");
+}
+function addProduct(){
+  const name=document.getElementById("name").value.trim(), link=document.getElementById("link").value.trim();
+  if(!name||!link||!currentPhoto){alert("Preencha o nome, o link e escolha uma foto.");return}
+  products.unshift({name,link,photo:currentPhoto});save();
+  document.getElementById("name").value="";document.getElementById("link").value="";
+  document.getElementById("photo").value="";currentPhoto="";document.getElementById("preview").style.display="none";
+}
+function removeProduct(i){if(confirm("Remover este produto?")){products.splice(i,1);save();}}
+function previewPhoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{currentPhoto=r.result;let p=document.getElementById("preview");p.src=currentPhoto;p.style.display="block"};r.readAsDataURL(f)}
+function toggleAdmin(){const p=document.getElementById("adminPanel");p.style.display=p.style.display==="block"?"none":"block";p.scrollIntoView({behavior:"smooth"})}
+function openLogin(){document.getElementById("login").style.display="flex"}
+function closeLogin(){document.getElementById("login").style.display="none"}
+function guest(){closeLogin();alert("Você está navegando como convidado.")}
+function loginEmail(){const e=document.getElementById("email").value.trim();if(!e){alert("Digite seu e-mail.");return}closeLogin();alert("Login demonstrativo realizado para "+e)}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function safeUrl(u){return /^https?:\/\//i.test(u)?u:"#"}
+render();
+</script>
+</body>
+</html>
